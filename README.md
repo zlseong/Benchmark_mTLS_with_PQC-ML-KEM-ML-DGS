@@ -1,6 +1,6 @@
 # PQC_hybrid-mTLS
 
-양자 내성(PQC) 알고리즘과 기존 암호를 혼합한 하이브리드 mTLS 실험 레포지토리입니다. TLS 1.3 고정 환경에서 서버/클라이언트 핸드셰이크를 수행하고, 성공률과 시간 통계를 수집합니다.
+양자 내성(PQC) 알고리즘과 기존 암호를 혼합한 하이브리드 mTLS 실험 레포지입니다. TLS 1.3 고정 환경에서 서버/클라이언트 핸드셰이크를 수행하고, 성공률과 시간 통계를 수집합니다.
 
 ## 주요 기능
 - TLS 1.3 고정, Cipher: TLS_AES_128_GCM_SHA256
@@ -22,7 +22,7 @@
 ## 요구 사항
 - Linux 또는 WSL2
 - GCC/Clang, Make
-- OpenSSL 3.x 개발 패키지(`libssl-dev` 등)
+- OpenSSL 3.6.0 이상
 - Python 3.x(선택, `benchmark.py` 사용 시)
 
 ## 빠른 시작
@@ -59,6 +59,19 @@ chmod +x run_benchmark.sh
 python3 benchmark.py
 # 결과: results/tls13_pqc_benchmark.json, results/tls13_pqc_benchmark.csv
 ```
+
+## 벤치마크 결과
+
+### PQC-Hybrid 상호 TLS 핸드셰이크 성능 (무선 환경)
+
+| Key encryption Algorithm | Mean (ms) | vs baseline | Traffic (bytes) | CPU cycles |
+| :----------------------- | :-------- | :---------- | :-------------- | :--------- |
+| x25519                   | 8.79      | -           | 1,943           | -          |
+| ML-KEM 512               | 9.29      | +5.7%       | 3,454           | 223,187    |
+| ML-KEM 768               | 10.53     | +19.8%      | 4,159           | 252,939    |
+| ML-KEM 1024              | 10.72     | +22.2%      | 5,023           | 255,232    |
+
+**실험 환경:** Wi-Fi (30 Mbps). 레이턴시(Latency)와 트래픽(Traffic)은 동일한 조건에서 반복 실행된 결과의 평균값입니다.
 
 ## 측정 항목(메트릭)
 - 시간(핸드셰이크 레이턴시)
@@ -112,13 +125,7 @@ python3 benchmark.py
 - 알고리즘 조합(예)
   - Baseline: (x25519 + ecdsa)
   - KEM + ECDSA: (mlkem{512,768,1024} + ecdsa)
-  - KEM + ML-DSA: (mlkem{512,768,1024} + dilithium{2,3,5})
-
-## 트러블슈팅
-- 인증서 오류: `./generate_certs.sh` 재실행 및 산출물 경로 확인
-- 링크 오류: OpenSSL 3.x와 `libssl-dev` 설치 확인
-- 포트 충돌: 4433 사용 중인지 확인(필요 시 포트 인자 변경)
-- WSL 네트워킹: 서버/클라이언트를 동일 WSL에서 먼저 검증
+  - KEM + ML-DSA: (mlkem{512,768,1024} + dilithium{52,64,76})
 
 ## 라이선스
 - 라이선스는 `LICENSE` 파일을 참고하세요.
