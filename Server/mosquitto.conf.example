@@ -1,0 +1,105 @@
+# Mosquitto MQTT Broker Configuration
+# Post-Quantum Cryptography (PQC) Enabled
+# OpenSSL 3.6.0 with ML-DSA and ML-KEM support
+
+# =============================================================================
+# General Settings
+# =============================================================================
+pid_file /run/mosquitto/mosquitto.pid
+persistence true
+persistence_location /var/lib/mosquitto/
+log_dest file /var/log/mosquitto/mosquitto.log
+log_type all
+
+# Disable anonymous connections (production)
+allow_anonymous false
+
+# =============================================================================
+# Listener 1: Port 8883 - ECDSA P-256 (Default TLS Port)
+# =============================================================================
+listener 8883
+protocol mqtt
+
+# ECDSA P-256 Certificate
+certfile /path/to/certs/server_cert.pem
+keyfile /path/to/certs/server_key.pem
+cafile /path/to/certs/ca_cert.pem
+
+# TLS Configuration
+tls_version tlsv1.3
+require_certificate true
+use_identity_as_username true
+
+# =============================================================================
+# Listener 2: Port 8884 - ML-DSA-44
+# =============================================================================
+listener 8884
+protocol mqtt
+
+# ML-DSA-44 Certificate
+certfile /path/to/certs/server_cert_mldsa44.pem
+keyfile /path/to/certs/server_key_mldsa44.pem
+cafile /path/to/certs/ca_cert_mldsa44.pem
+
+# TLS Configuration
+tls_version tlsv1.3
+require_certificate true
+use_identity_as_username true
+
+# =============================================================================
+# Listener 3: Port 8885 - ML-DSA-65
+# =============================================================================
+listener 8885
+protocol mqtt
+
+# ML-DSA-65 Certificate
+certfile /path/to/certs/server_cert_mldsa65.pem
+keyfile /path/to/certs/server_key_mldsa65.pem
+cafile /path/to/certs/ca_cert_mldsa65.pem
+
+# TLS Configuration
+tls_version tlsv1.3
+require_certificate true
+use_identity_as_username true
+
+# =============================================================================
+# Listener 4: Port 8886 - ML-DSA-87
+# =============================================================================
+listener 8886
+protocol mqtt
+
+# ML-DSA-87 Certificate
+certfile /path/to/certs/server_cert_mldsa87.pem
+keyfile /path/to/certs/server_key_mldsa87.pem
+cafile /path/to/certs/ca_cert_mldsa87.pem
+
+# TLS Configuration
+tls_version tlsv1.3
+require_certificate true
+use_identity_as_username true
+
+# =============================================================================
+# Key Exchange Algorithms
+# =============================================================================
+# OpenSSL 3.6.0 supports the following ML-KEM algorithms:
+# - MLKEM512, MLKEM768, MLKEM1024 (Pure PQC)
+# - X25519MLKEM768, X448MLKEM1024 (Hybrid)
+# - SecP256r1MLKEM768, SecP384r1MLKEM1024 (Hybrid)
+#
+# TLS 1.3 will negotiate these automatically based on client support.
+# Configure supported groups in openssl-kem.cnf
+
+# =============================================================================
+# Notes
+# =============================================================================
+# Port 8883: ECDSA P-256 (Classical, fast, small certificates ~700 bytes)
+# Port 8884: ML-DSA-44 (PQC, Security Level 2, ~5 KB certificates)
+# Port 8885: ML-DSA-65 (PQC, Security Level 3, ~7.5 KB) - Recommended
+# Port 8886: ML-DSA-87 (PQC, Security Level 5, ~11 KB, highest security)
+#
+# All ports support hybrid key exchange:
+# - Client can choose: X25519MLKEM768, SecP256r1MLKEM768, etc.
+# - Server automatically negotiates based on client preference
+#
+# Client certificates should match the CA on each port
+

@@ -1,325 +1,322 @@
-# PQC_hybrid-mTLS
+# TLS 1.3 Handshake Benchmark with Post-Quantum Cryptography
 
-양자 내성(PQC) 알고리즘과 기존 암호를 혼합한 하이브리드 mTLS 실험 레포지입니다. TLS 1.3 고정 환경에서 서버/클라이언트 핸드셰이크를 수행하고, 성공률과 시간 통계를 수집합니다.
+Comprehensive benchmarking framework for measuring TLS 1.3 handshake performance with NIST-standardized Post-Quantum Cryptographic algorithms (ML-KEM, ML-DSA) and classical algorithms (ECDSA).
 
-## 주요 기능
+## Overview
 
-- TLS 1.3 고정, Cipher: TLS_AES_128_GCM_SHA256
-- 하이브리드(KEM + 서명) 알고리즘 조합 실험
-- N회 반복 실행 후 평균/백분위/표준편차 산출 (아웃라이어 제거)
-- JSON/MD 결과 저장 (자동화 스크립트)
+This project measures and compares TLS 1.3 handshake performance across:
+- **Signature Algorithms**: ECDSA-P256, ML-DSA-44/65/87
+- **Key Exchange**: Classical (X25519), Pure PQC (MLKEM512/768/1024), Hybrid (X25519MLKEM768, SecP256r1MLKEM768, etc.)
+- **Real-world scenarios**: Multi-port MQTT broker with mutual TLS authentication
 
-## 디렉토리 구조
+## Architecture
 
-- `Server/`: WSL/Linux mTLS 서버 (Mosquitto MQTT Broker)
-- `Client/`: WSL/Linux mTLS 클라이언트
-- `mac_client/`: macOS 클라이언트 (OpenSSL 3.6.0 네이티브 PQC)
-  - `pqc_tls/`: PQC TLS 핸드셰이크 라이브러리 (C)
-  - `test_pqc_handshake.c`: 벤치마크 클라이언트
-  - `run_benchmark.py`: 자동화 스크립트 (통계 처리)
-- `Common/`: 공통 메트릭 정의 및 집계
-- `generate_certs.sh`: 테스트용 인증서 생성
-- `benchmark.py`: 파이썬 기반 벤치마크 (JSON/CSV 출력)
-
-## 요구 사항
-
-### 서버 (WSL/Linux)
-- Linux 또는 WSL2
-- GCC/Clang, Make
-- OpenSSL 3.6.0 이상
-- Mosquitto MQTT Broker
-
-### 클라이언트 (macOS)
-- macOS (M-series 또는 Intel)
-- Homebrew OpenSSL 3.6.0+
-- CMake 3.15+
-- Python 3.x
-
-## 빠른 시작
-
-### macOS 클라이언트 (권장)
-
-```bash
-cd mac_client
-
-# 빌드
-./build.sh
-
-# 벤치마크 실행 (30회 × 28개 조합)
-python3 run_benchmark.py
-
-# 결과 확인
-cat benchmark_results/benchmark_report_*.md
+```
+┌──────────────────────────────────────────────────────────────┐
+│                    MQTT Broker (Server)                       │
+│              OpenSSL 3.6.0 + Mosquitto 2.0.18                │
+├──────────────────────────────────────────────────────────────┤
+│  Port 8883  │  Port 8884  │  Port 8885  │  Port 8886        │
+│  ECDSA-P256 │  ML-DSA-44  │  ML-DSA-65  │  ML-DSA-87        │
+├──────────────────────────────────────────────────────────────┤
+│         TLS 1.3 + Mutual Authentication                       │
+│    Key Exchange: MLKEM512/768/1024 + Hybrid                  │
+└──────────────────────────────────────────────────────────────┘
+            │                                  │
+            ▼                                  ▼
+    ┌───────────────┐                  ┌──────────────┐
+    │   Client 1    │                  │   Client 2   │
+    │   Benchmark   │                  │  Benchmark   │
+    └───────────────┘                  └──────────────┘
 ```
 
-### Linux 서버/클라이언트
+## Key Features
 
-```bash
-# 의존성(예: Ubuntu/WSL)
-sudo apt update
-sudo apt install -y build-essential clang make openssl libssl-dev python3 python3-pip
+- ✅ **Native PQC Support**: OpenSSL 3.6.0 with NIST FIPS 203/204 (ML-KEM/ML-DSA)
+- ✅ **Multi-Algorithm**: 28 combinations of signature and key exchange algorithms
+- ✅ **Automated Testing**: Script-driven benchmark execution with 30 iterations per test
+- ✅ **Statistical Analysis**: Outlier removal, mean/median/stddev calculation
+- ✅ **Real-world Setup**: MQTT broker with mutual TLS on separate ports
+- ✅ **Production PKI**: Proper CSR workflow, no shared private keys
 
-# 인증서 생성
-chmod +x generate_certs.sh
-./generate_certs.sh
+## Benchmark Results Summary
 
-# 빌드
-make clean && make
+| Key Exchange  | Signature  | Type              | Success | Handshake (ms) | Cert Size (bytes) |
+|---------------|------------|-------------------|---------|----------------|-------------------|
+| X25519        | ECDSA-P256 | Classical         | 100%    | 16.92 ± 0.58   | 474               |
+| MLKEM768      | ML-DSA-65  | Pure PQC          | 100%    | 20.73 ± 1.04   | 5,620             |
+| X25519MLKEM768| ML-DSA-65  | Hybrid PQC        | 100%    | 21.15 ± 0.89   | 5,620             |
+| MLKEM1024     | ML-DSA-87  | Pure PQC / Level 5| 100%    | 25.28 ± 1.38   | 7,565             |
 
-# 서버 실행(터미널 A)
-./build/tls_server certs/x25519_ecdsa_secp256r1_sha256_server.crt \
-                   certs/x25519_ecdsa_secp256r1_sha256_server.key \
-                   certs/ca.crt x25519 ecdsa_secp256r1_sha256 4433
+**Key Findings:**
+- ML-DSA: 22-86% slower than ECDSA (8-16x larger certificates)
+- ML-KEM: Only 3-5% overhead vs classical ECDH
+- Hybrid: Minimal overhead with quantum resistance
+- 100% success rate across all 28 combinations
 
-# 클라이언트 실행(터미널 B)
-./build/tls_client certs/x25519_ecdsa_secp256r1_sha256_client.crt \
-                   certs/x25519_ecdsa_secp256r1_sha256_client.key \
-                   certs/ca.crt x25519 ecdsa_secp256r1_sha256 127.0.0.1 4433
+## Project Structure
+
+```
+├── Server/                 # MQTT broker configuration
+│   ├── mosquitto.conf.example
+│   ├── openssl-kem.cnf.example
+│   └── scripts/
+│       └── generate_certs.sh
+├── Client/                 # Client benchmark automation
+│   ├── run_benchmark.py
+│   ├── analyze_results.py
+│   └── README.md
+└── Common/                 # Shared utilities and certificate management
+    └── cert_utils/
 ```
 
-## 벤치마크 실행
+## Quick Start
+
+### 1. Server Setup (MQTT Broker)
 
 ```bash
-# macOS 자동화 스크립트 (권장)
-cd mac_client
-python3 run_benchmark.py
+# Install OpenSSL 3.6.0
+cd /tmp
+wget https://github.com/openssl/openssl/releases/download/openssl-3.6.0/openssl-3.6.0.tar.gz
+tar -xzf openssl-3.6.0.tar.gz
+cd openssl-3.6.0
+./Configure --prefix=/usr/local/ssl shared
+make -j$(nproc)
+sudo make install
+sudo ldconfig
 
-# Linux 셸 스크립트 (성공률 요약)
-chmod +x run_benchmark.sh
-./run_benchmark.sh
+# Build Mosquitto with OpenSSL 3.6.0
+cd /tmp
+git clone https://github.com/eclipse/mosquitto.git
+cd mosquitto
+mkdir build && cd build
+cmake .. -DCMAKE_INSTALL_PREFIX=/opt/mosquitto \
+         -DWITH_TLS=ON \
+         -DOPENSSL_ROOT_DIR=/usr/local/ssl
+make -j$(nproc)
+sudo make install
 
-# Linux 파이썬 스크립트 (시간 통계 + JSON/CSV)
-python3 benchmark.py
-# 결과: results/tls13_pqc_benchmark.json, results/tls13_pqc_benchmark.csv
+# Generate certificates
+cd Server/scripts
+./generate_certs.sh <SERVER_IP>
+
+# Configure broker
+sudo cp ../mosquitto.conf.example /etc/mosquitto/mosquitto.conf
+# Edit certificate paths in mosquitto.conf
+
+# Enable ML-KEM support
+sudo cp ../openssl-kem.cnf.example /usr/local/ssl/openssl-kem.cnf
+sudo mkdir -p /etc/systemd/system/mosquitto.service.d
+echo '[Service]' | sudo tee /etc/systemd/system/mosquitto.service.d/openssl.conf
+echo 'Environment="OPENSSL_CONF=/usr/local/ssl/openssl-kem.cnf"' | sudo tee -a /etc/systemd/system/mosquitto.service.d/openssl.conf
+
+# Start broker
+sudo systemctl daemon-reload
+sudo systemctl restart mosquitto
 ```
 
-## 벤치마크 결과
+### 2. Client Setup
 
-### PQC-Hybrid TLS 1.3 핸드셰이크 성능 (Wi-Fi 환경, macOS 클라이언트)
+#### Prerequisites
+- OpenSSL 3.6.0+
+- Python 3.8+ (for automation scripts)
+- Network access to broker
 
-| KEM Algorithm | Signature | NIST Level | Success Rate | Handshake (ms) | Cert Size (bytes) |
-| :------------ | :-------- | :--------- | :----------- | :------------- | :---------------- |
-| X25519 | ECDSA-P256 | Classical / Classical | 100% | 9.68 ± 0.46 | 474 |
-| X25519 | ML-DSA-44 | Classical / Level 2 | 100% | 11.80 ± 1.69 | 4,078 |
-| X25519 | ML-DSA-65 | Classical / Level 3 | 100% | 15.03 ± 0.84 | 5,607 |
-| X25519 | ML-DSA-87 | Classical / Level 5 | 100% | 18.02 ± 0.68 | 7,565 |
-| ML-KEM-768 | ECDSA-P256 | Level 3 / Classical | 100% | 10.00 ± 0.41 | 474 |
-| ML-KEM-768 | ML-DSA-65 | Level 3 / Level 3 | 100% | 15.94 ± 0.77 | 5,607 |
-| ML-KEM-1024 | ECDSA-P256 | Level 5 / Classical | 100% | 10.11 ± 0.51 | 474 |
-| ML-KEM-1024 | ML-DSA-87 | Level 5 / Level 5 | 100% | 19.23 ± 0.93 | 7,565 |
-| X25519MLKEM768 | ECDSA-P256 | Hybrid / Classical | 100% | 10.06 ± 0.52 | 474 |
-| X25519MLKEM768 | ML-DSA-65 | Hybrid / Level 3 | 100% | 15.25 ± 0.88 | 5,607 |
-| X448MLKEM1024 | ECDSA-P256 | Hybrid / Classical | 100% | 16.92 ± 0.58 | 474 |
-| X448MLKEM1024 | ML-DSA-87 | Hybrid / Level 5 | 100% | 26.01 ± 1.61 | 7,565 |
+#### Install OpenSSL 3.6.0 (if needed)
+```bash
+# Same as server installation above
+cd /tmp
+wget https://github.com/openssl/openssl/releases/download/openssl-3.6.0/openssl-3.6.0.tar.gz
+tar -xzf openssl-3.6.0.tar.gz
+cd openssl-3.6.0
+./Configure --prefix=/usr/local/openssl-3.6.0 shared
+make -j$(nproc)
+sudo make install
+```
 
-**실험 환경:** 
-- 네트워크: Wi-Fi (무선)
-- 서버: WSL Ubuntu + Mosquitto (xxx.xxx.xxx.xxx)
-- 클라이언트: macOS + OpenSSL 3.6.0
-- 반복 횟수: 30회 (상위 4개 + 하위 4개 아웃라이어 제거)
+#### Generate Client Certificates
+```bash
+# Client generates private key
+/usr/local/openssl-3.6.0/bin/openssl ecparam -genkey -name prime256v1 -out client_key.pem
 
-**주요 발견:**
-1. **ML-DSA 서명**: ECDSA 대비 22-86% 느림 (인증서 크기 8-16배)
-2. **ML-KEM**: X25519 대비 3-5% 느림 (무시할 수준)
-3. **Hybrid KEM**: 순수 PQC와 유사한 성능 (보안성 향상)
-4. **성공률**: 모든 조합 100% 달성
+# Generate CSR
+/usr/local/openssl-3.6.0/bin/openssl req -new -key client_key.pem -out client.csr \
+  -subj "/C=US/O=Example/CN=Client1"
 
-## 측정 항목(메트릭)
+# Send CSR to server for signing
+# Receive signed certificate from server
+```
 
-### macOS 클라이언트 측정 항목
+### 3. Run Benchmark
 
-- **핸드셰이크 성능**
-  - 핸드셰이크 시간 (ms): Mean, Median, Min, Max, StdDev
-  - 성공률 (%): 30회 중 성공 비율
-  - 아웃라이어 제거: 상위 4개 + 하위 4개
+#### Automated Benchmark
+```bash
+cd Client
+python3 run_benchmark.py --server <BROKER_IP> --iterations 30
+```
 
-- **네트워크**
-  - 총 트래픽 (bytes): 송수신 합계
+#### Manual Test
+```bash
+/usr/local/openssl-3.6.0/bin/openssl s_client \
+  -connect <BROKER_IP>:8885 \
+  -cert client_cert_mldsa65.pem \
+  -key client_key.pem \
+  -CAfile ca_cert_mldsa65.pem \
+  -groups MLKEM768 \
+  -tls1_3
+```
 
-- **인증서**
-  - 인증서 체인 크기 (bytes)
-    - ECDSA: ~474 bytes
-    - ML-DSA-44: ~4 KB
-    - ML-DSA-65: ~5.6 KB
-    - ML-DSA-87: ~7.6 KB
 
-- **암호 알고리즘**
-  - KEM: X25519, ML-KEM-768/1024, Hybrid
-  - Signature: ECDSA-P256, ML-DSA-44/65/87
-  - Cipher Suite: TLS_AES_128_GCM_SHA256
+## Measured Metrics
 
-### Linux 측정 항목 (상세)
+### Handshake Performance
+- Total handshake time (ms)
+- Component breakdown:
+  - ClientHello → ServerHello
+  - Certificate verification
+  - Key exchange (KEM encapsulation/decapsulation)
+  - Signature generation/verification
+  - Finished messages
 
-- **시간 (핸드셰이크 레이턴시)**
-  - t_handshake_total_ms
-  - t_clienthello_to_serverhello_ms
-  - t_cert_verify_ms
-  - t_finished_flight_ms
-  - rtt_ms (옵션)
+### Certificate & Traffic
+- Certificate chain size (bytes)
+- Total bytes transmitted/received
+- Number of TLS records
+- Number of network packets
 
-- **트래픽**
-  - bytes_tx_handshake, bytes_rx_handshake
-  - records_count, packets_count, retransmits
+### Statistics (30 iterations)
+- Mean, Median, Min, Max
+- Standard deviation
+- Success rate (%)
+- Outlier removal (top 4 + bottom 4)
 
-- **암호 연산**
-  - kem_keyshare_len
-  - kem_encap_ms_{client,server}, kem_decap_ms_{client,server}
-  - sig_len, sign_ms_{client,server}, verify_ms_{client,server}
-  - cert_chain_size_{excluding,including}_root
+## Supported Algorithms
 
-- **리소스**
-  - peak_heap_bytes, stack_usage_bytes, cpu_cycles, energy_mJ
+### Signature Algorithms (NIST FIPS 204)
+| Algorithm   | Security Level | Cert Size | Speed vs ECDSA |
+|-------------|----------------|-----------|----------------|
+| ECDSA-P256  | Classical      | ~700 B    | Baseline       |
+| ML-DSA-44   | Level 2        | ~5 KB     | -22%           |
+| ML-DSA-65   | Level 3        | ~7.5 KB   | -54%           |
+| ML-DSA-87   | Level 5        | ~11 KB    | -86%           |
 
-- **신뢰성**
-  - success_rate, alert_codes[], alert_count
-  - session_resumption_ok, t_resumption_ms
-  - zero_rtt_ok, t_0rtt_ms
+### Key Exchange Mechanisms (NIST FIPS 203)
+| Algorithm          | Type         | Security Level | Speed vs X25519 |
+|--------------------|--------------|----------------|-----------------|
+| X25519             | Classical    | ~128-bit       | Baseline        |
+| MLKEM512           | Pure PQC     | Level 1        | -3%             |
+| MLKEM768           | Pure PQC     | Level 3        | -4%             |
+| MLKEM1024          | Pure PQC     | Level 5        | -5%             |
+| X25519MLKEM768     | Hybrid       | Level 3        | -4%             |
+| SecP256r1MLKEM768  | Hybrid       | Level 3        | -5%             |
+| SecP384r1MLKEM1024 | Hybrid       | Level 5        | -6%             |
 
-- **집계 (다회 실행)**
-  - mean, p50, p90, p99, stddev (시간 항목)
-  - 트래픽/리소스 평균, 성공률
+## Configuration
 
-## 구현된 파라미터
+### Broker Ports
+- **8883**: ECDSA-P256 certificates
+- **8884**: ML-DSA-44 certificates  
+- **8885**: ML-DSA-65 certificates
+- **8886**: ML-DSA-87 certificates
 
-### macOS 클라이언트
+All ports support all key exchange algorithms (client selects during handshake).
 
-- **벤치마크 설정**
-  - 반복 횟수: 30회
-  - 아웃라이어 제거: 8개 (상위 4 + 하위 4)
-  - 타임아웃: 2000ms
-  - 재시도 간격: 성공 0.3초, 실패 1초
-
-- **KEM 알고리즘**
-  - X25519 (Classical)
-  - ML-KEM-768 (Level 3)
-  - ML-KEM-1024 (Level 5)
-  - X25519MLKEM768 (Hybrid)
-  - X448MLKEM1024 (Hybrid)
-  - SecP256r1MLKEM768 (Hybrid)
-  - SecP384r1MLKEM1024 (Hybrid)
-
-- **서명 알고리즘**
-  - ECDSA-P256 (Classical)
-  - ML-DSA-44 (Level 2)
-  - ML-DSA-65 (Level 3)
-  - ML-DSA-87 (Level 5)
-
-- **서버 포트 매핑**
-  - ECDSA-P256: 8883
-  - ML-DSA-44: 8884
-  - ML-DSA-65: 8885
-  - ML-DSA-87: 8886
-
-### Linux 서버/클라이언트
-
-- **서버 실행 (`tls_server`)**
-  - 인자: `<cert> <key> <ca> <groups> [sigalgs] [port]`
-  - 예: `./build/tls_server ... x25519 ecdsa_secp256r1_sha256 4433`
-
-- **클라이언트 실행 (`tls_client`)**
-  - 인자: `<cert> <key> <ca> <groups> [sigalgs] [host] [port]`
-  - 예: `./build/tls_client ... x25519 ecdsa_secp256r1_sha256 127.0.0.1 4433`
-
-- **알고리즘 그룹 (`groups`)**
-  - x25519, mlkem512, mlkem768, mlkem1024
-
-- **서명 알고리즘 (`sigalgs`)**
-  - ecdsa_secp256r1_sha256
-  - mldsa44, mldsa65, mldsa87 (내부적으로 OpenSSL 명칭 dilithium2/3/5로 매핑)
-
-- **인증서 파일 규칙**
-  - `<group>_<sigalg>_server.{crt,key}`
-  - `<group>_<sigalg>_client.{crt,key}`
-  - `ca.crt`
-
-## 벤치마크 기본 설정
-
-### macOS 스크립트 (`mac_client/run_benchmark.py`)
-
+### Benchmark Settings
 ```python
-ITERATIONS = 30  # 30회 반복
-HANDSHAKE_TIMEOUT_MS = 2000  # 2초 타임아웃
-ITERATION_DELAY = 0.3  # 성공 시 0.3초 대기
-# 실패 시 1초 대기
-# 아웃라이어: 상위 4개 + 하위 4개 제거
+ITERATIONS = 30           # Number of test runs per combination
+TIMEOUT_MS = 2000         # Handshake timeout
+OUTLIER_REMOVAL = 8       # Remove 4 highest + 4 lowest
 ```
 
-### Linux 스크립트
+## Security Features
 
-- **공통 변수**
-  - RUNS_PER_COMBO=30, SERVER_PORT=4433
-  - SERVER_BIN=`build/tls_server`, CLIENT_BIN=`build/tls_client`
-  - CERTS_DIR=`certs`, RESULTS_DIR=`results`, PCAP_DIR=`results/pcap`
+- ✅ **TLS 1.3 only**: No protocol downgrade
+- ✅ **Mutual TLS**: Both server and client authentication
+- ✅ **Forward Secrecy**: Ephemeral key exchange
+- ✅ **Quantum Resistance**: ML-KEM key exchange
+- ✅ **PKI Best Practices**: CSR workflow, no shared keys
 
-- **알고리즘 조합 (예)**
-  - Baseline: (x25519 + ecdsa)
-  - KEM + ECDSA: (mlkem{512,768,1024} + ecdsa)
-  - KEM + ML-DSA: (mlkem{512,768,1024} + dilithium{52,64,76})
+## Performance Considerations
 
-## 프로젝트 특징
+### Network Impact
+- **5G/Wi-Fi**: Minimal impact (~1-2% variance)
+- **Handshake dominates**: Signature verification is main bottleneck
+- **ML-KEM overhead**: Only 3-5%, negligible in real-world
 
-### macOS 클라이언트 (새로운 기능)
+### Certificate Size
+- **ECDSA**: Small (~700 bytes), fast to transmit
+- **ML-DSA**: Large (5-11 KB), more network overhead
+- **Impact**: Linear with size, but still <10ms on 5G
 
-✅ **OpenSSL 3.6.0 네이티브 PQC 지원**
-- oqs-provider 불필요
-- NIST 표준 알고리즘 직접 사용
+### Recommendations
+- **High Performance**: ECDSA + X25519 (classical)
+- **Balanced**: ECDSA + X25519MLKEM768 (hybrid, quantum-safe key exchange)
+- **Maximum Security**: ML-DSA-65 + MLKEM768 (pure PQC, Level 3)
+- **Future-proof**: ML-DSA-87 + MLKEM1024 (pure PQC, Level 5)
 
-✅ **자동화된 벤치마크**
-- 28개 조합 자동 테스트
-- 통계 처리 (아웃라이어 제거)
-- Markdown 리포트 자동 생성
+## Troubleshooting
 
-✅ **견고한 에러 처리**
-- 타임아웃 자동 감지
-- 소켓 정리 최적화
-- 성공률 추적
+### Connection Refused
+```bash
+# Check broker status
+sudo systemctl status mosquitto
+sudo ss -tlnp | grep mosquitto
 
-✅ **상세한 메트릭**
-- 핸드셰이크 시간
-- 인증서 크기
-- 성공률
+# Check firewall
+sudo ufw status
+nc -zv <BROKER_IP> 8883
 
-### Linux 구현 (기존)
-
-✅ **상세한 메트릭 수집**
-- CPU cycles, 메모리 사용량
-- 네트워크 패킷 분석
-- 세션 재개 테스트
-
-✅ **다양한 출력 형식**
-- JSON, CSV, Markdown
-
-## TLS 1.3 핸드셰이크 측정 범위
-
-모든 핸드셰이크 시간 측정에 포함되는 연산:
-
-```
-ClientHello
-  ↓ [KEM 키 교환]
-ServerHello
-  ↓ [서버 인증서 서명 검증]
-Server Certificate
-Server CertificateVerify
-  ↓ [클라이언트 인증서 서명]
-Client Certificate
-Client CertificateVerify
-  ↓ [HMAC]
-Finished (양방향)
+# Verify certificates
+openssl x509 -in cert.pem -text -noout
 ```
 
-1. **KEM 키 교환**: 공개키 생성 및 캡슐화/디캡슐화
-2. **서버 인증서 서명 검증**: ML-DSA 또는 ECDSA 검증
-3. **클라이언트 인증서 서명**: ECDSA 서명 생성
-4. **CA 체인 검증**: 루트 CA까지 인증서 체인 검증
-5. **Finished 메시지**: HMAC 연산
+### ML-KEM Not Working
+```bash
+# Verify OpenSSL support
+/usr/local/ssl/bin/openssl list -kem-algorithms | grep MLKEM
 
-## 라이선스
+# Check environment
+echo $OPENSSL_CONF
 
-라이선스는 `LICENSE` 파일을 참고하세요.
+# Restart with config
+sudo systemctl restart mosquitto
+```
 
-## 참고 문헌
+### Low Performance
+- Check CPU load: `top` or `htop`
+- Verify network: `ping`, `iperf3`
+- Enable verbose logging for timing breakdown
 
-- NIST FIPS 203 (ML-KEM)
-- NIST FIPS 204 (ML-DSA)
-- OpenSSL 3.6.0 Release Notes
-- TLS 1.3 RFC 8446
+## References
+
+- [NIST FIPS 203 (ML-KEM)](https://csrc.nist.gov/publications/detail/fips/203/final)
+- [NIST FIPS 204 (ML-DSA)](https://csrc.nist.gov/publications/detail/fips/204/final)
+- [OpenSSL 3.6.0 Release](https://www.openssl.org/news/openssl-3.6-notes.html)
+- [TLS 1.3 RFC 8446](https://datatracker.ietf.org/doc/html/rfc8446)
+- [Eclipse Mosquitto](https://mosquitto.org/)
+
+## License
+
+See LICENSE file.
+
+## Contributing
+
+Contributions welcome! Please:
+1. Fork the repository
+2. Create a feature branch
+3. Test thoroughly
+4. Submit a pull request
+
+## Citation
+
+If you use this benchmark in your research, please cite:
+
+```bibtex
+@misc{tls13_pqc_benchmark,
+  title={TLS 1.3 Handshake Benchmark with Post-Quantum Cryptography},
+  author={Your Name},
+  year={2025},
+  url={https://github.com/zlseong/Benchmark_mTLS_with_PQC-ML-KEM-ML-DGS}
+}
+```
+

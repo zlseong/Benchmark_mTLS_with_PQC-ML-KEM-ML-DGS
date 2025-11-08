@@ -1,0 +1,27 @@
+# OpenSSL Configuration for ML-KEM Support
+# Pure ML-KEM + Hybrid ML-KEM
+
+openssl_conf = openssl_init
+
+[openssl_init]
+ssl_conf = ssl_sect
+
+[ssl_sect]
+system_default = system_default_sect
+
+[system_default_sect]
+# TLS Groups - Pure ML-KEM + Hybrid
+# Priority: Pure ML-KEM > Hybrid > Classical
+Groups = MLKEM512:MLKEM768:MLKEM1024:X25519MLKEM768:SecP256r1MLKEM768:SecP384r1MLKEM1024:X25519:X448:prime256v1:secp384r1:secp521r1
+
+# TLS 1.3 Configuration
+MinProtocol = TLSv1.3
+CipherString = DEFAULT@SECLEVEL=2
+
+# Key Exchange Groups Explanation:
+# - MLKEM512/768/1024: Pure post-quantum key exchange
+# - X25519MLKEM768: Hybrid (classical X25519 + PQC ML-KEM-768)
+# - SecP256r1MLKEM768: Hybrid (classical P-256 + PQC ML-KEM-768)
+# - SecP384r1MLKEM1024: Hybrid (classical P-384 + PQC ML-KEM-1024)
+# - X25519/prime256v1: Classical algorithms (fallback)
+

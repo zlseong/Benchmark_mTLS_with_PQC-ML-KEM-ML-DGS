@@ -1,0 +1,59 @@
+# Certificate and Key Files
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+
+# Private Keys
+*_key.*
+*key.*
+ca_key*
+server_key*
+client_key*
+
+# Personal Configuration
+mosquitto.conf
+openssl.cnf
+*.local
+*.private
+
+# Logs
+*.log
+logs/
+
+# Temporary Files
+*.tmp
+*.swp
+*.bak
+*~
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Build
+build/
+dist/
+*.o
+*.so
+*.dylib
+*.dll
+
+# Personal Paths
+/home/*/
+C:/Users/*/
+
