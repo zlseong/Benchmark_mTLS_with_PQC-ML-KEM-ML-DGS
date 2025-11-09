@@ -32,12 +32,12 @@ This project measures and compares TLS 1.3 handshake performance across:
 
 ## Key Features
 
-- ✅ **Native PQC Support**: OpenSSL 3.6.0 with NIST FIPS 203/204 (ML-KEM/ML-DSA)
-- ✅ **Multi-Algorithm**: 28 combinations of signature and key exchange algorithms
-- ✅ **Automated Testing**: Script-driven benchmark execution with 30 iterations per test
-- ✅ **Statistical Analysis**: Outlier removal, mean/median/stddev calculation
-- ✅ **Real-world Setup**: MQTT broker with mutual TLS on separate ports
-- ✅ **Production PKI**: Proper CSR workflow, no shared private keys
+-  **Native PQC Support**: OpenSSL 3.6.0 with NIST FIPS 203/204 (ML-KEM/ML-DSA)
+-  **Multi-Algorithm**: 28 combinations of signature and key exchange algorithms
+-  **Automated Testing**: Script-driven benchmark execution with 30 iterations per test
+-  **Statistical Analysis**: Outlier removal, mean/median/stddev calculation
+-  **Real-world Setup**: MQTT broker with mutual TLS on separate ports
+-  **Production PKI**: Proper CSR workflow, no shared private keys
 
 ## Benchmark Results Summary
 
@@ -230,11 +230,11 @@ OUTLIER_REMOVAL = 8       # Remove 4 highest + 4 lowest
 
 ## Security Features
 
-- ✅ **TLS 1.3 only**: No protocol downgrade
-- ✅ **Mutual TLS**: Both server and client authentication
-- ✅ **Forward Secrecy**: Ephemeral key exchange
-- ✅ **Quantum Resistance**: ML-KEM key exchange
-- ✅ **PKI Best Practices**: CSR workflow, no shared keys
+-  **TLS 1.3 only**: No protocol downgrade
+-  **Mutual TLS**: Both server and client authentication
+-  **Forward Secrecy**: Ephemeral key exchange
+-  **Quantum Resistance**: ML-KEM key exchange
+-  **PKI Best Practices**: CSR workflow, no shared keys
 
 ## Performance Considerations
 
@@ -319,4 +319,5 @@ If you use this benchmark in your research, please cite:
   url={https://github.com/zlseong/Benchmark_mTLS_with_PQC-ML-KEM-ML-DGS}
 }
 ```
+
 
